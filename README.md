@@ -138,3 +138,18 @@ The one thing tests cannot prove is the Feishu side: event subscription mode, sc
 ## License
 
 MIT © wooxi
+
+## Troubleshooting
+
+**`ERR_PNPM_IGNORED_BUILDS` on install.** `@larksuiteoapi/node-sdk` pulls in `protobufjs`, whose postinstall script pnpm blocks by default. The profile's `pnpm-workspace.yaml` gets a placeholder like:
+
+```yaml
+allowBuilds:
+  protobufjs: set this to true or false
+```
+
+Set it to `true` and re-run the install.
+
+**Settings page does not appear.** The bundle has to be listed in the profile's `dsh.profile.bundles` as well as in `dependencies`. `dsh plugin add` normally does both; if you edited the profile by hand, check that `dsh-plugin-feishu` is in the array.
+
+**`session "…" belongs to "…", not "…"`.** The storage directory was changed while a session ID was still bound to the old one. The plugin now derives session IDs with a workspace fingerprint and retries on conflict, but if you hit it on an old install, clear `session-bindings.json` in the storage directory.
