@@ -13,15 +13,15 @@
     "channel",
     "bot"
   ],
-  "homepage": "https://github.com/wanjiaju3108/dsh-plugin-feishu#readme",
+  "homepage": "https://github.com/wooxi/dsh-plugin-feishu#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wanjiaju3108/dsh-plugin-feishu.git"
+    "url": "git+https://github.com/wooxi/dsh-plugin-feishu.git"
   },
   "bugs": {
-    "url": "https://github.com/wanjiaju3108/dsh-plugin-feishu/issues"
+    "url": "https://github.com/wooxi/dsh-plugin-feishu/issues"
   },
-  "author": "wanjiaju3108",
+  "author": "wooxi",
   "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
