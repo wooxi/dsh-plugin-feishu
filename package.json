@@ -43,6 +43,7 @@
     "docs/",
     "README.md",
     "README.zh.md",
+    "HANDOFF.md",
     "LICENSE"
   ],
   "dsh": {
