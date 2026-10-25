@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "飞书通道",
+    "description": "面向 DeepSeek Harness 的企业级飞书双向通道，支持 CardKit 2.0 增量流式打字机、思考链折叠、工具调用追踪及扫码快速配对。"
+  }
+}

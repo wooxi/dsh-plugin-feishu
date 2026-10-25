@@ -1,0 +1,4 @@
+# dsh-plugin-feishu bundle patch: one host row over the Web or Desktop profile.
+- insert:
+    - id: feishu-channel
+      name: dsh-plugin-feishu
