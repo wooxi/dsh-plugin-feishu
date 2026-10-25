@@ -1,5 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// 同 integration.test.mjs：任何 apply 都不能落在真实 profile 目录上。
+process.env.DSH_PROFILE_DIR = mkdtempSync(join(tmpdir(), 'dsh-feishu-boot-'));
+delete process.env.DSH_HOME;
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

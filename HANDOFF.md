@@ -94,6 +94,12 @@ DSH profile 的 pnpm 配置是 `autoInstallPeers: false`，peer 永远不会被�
 - 一张卡最多渲染 5 个表格，超出的降级成代码块（`downgradeTables`）。
 - 标题只认 H4/H5 两档字重，H1~H3 会被渲染得很怪，`optimizeMarkdownStyle` 做降级。
 
+### 7. 测试会写真实配置（已修，别再犯）
+
+`plugin.apply()` 从 `process.env.DSH_PROFILE_DIR` 推导 `cordis.patch.yml` 的路径。在 DSH 环境里跑 `npm test` 时这个变量指向**真实 profile**，于是集成测试触发的「首次绑定」会把假 open_id 写进生产配置——曾经把真人的 ownerId 覆盖成 `ou_tester_001`。
+
+现在两个会调 `apply()` 的测试文件都在顶部把 `DSH_PROFILE_DIR` 指到临时目录，`npm test` 脚本也加了兜底。**新加测试如果会写盘，照这个模式隔离。**
+
 ## 四、运行时依赖的外部配置
 
 部署到新机器时，这两处必须确认，否则装不上/跑不起来：

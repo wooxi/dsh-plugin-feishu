@@ -1,5 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// 测试绝不允许碰真实的 profile 配置：首次绑定会把 ownerId 写进
+// $DSH_PROFILE_DIR/cordis.patch.yml。这里指向一个空目录，让 existsSync 判定为 false。
+process.env.DSH_PROFILE_DIR = mkdtempSync(join(tmpdir(), 'dsh-feishu-test-'));
+delete process.env.DSH_HOME;
 
 test('Integration: 插件全链路（入站消息 → sessionController 投递 → 流式卡片 → 中止）', async () => {
   const plugin = await import('../lib/index.js');
