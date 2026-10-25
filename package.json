@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-feishu",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Feishu/Lark channel for DeepSeek Harness: CardKit 2.0 streaming cards, thinking folds, tool-call tracking, waterfall approvals and multimodal I/O over an outbound WebSocket — no public endpoint required.",
   "keywords": [
     "dsh-plugin",

@@ -162,3 +162,27 @@ test('Task 5: create 彻底失败时复用同工作区已有会话兜底', async
 
   assert.equal(id, 'sess_feishu_old', '必须复用本工作区会话，不能借用别处的会话');
 });
+
+test('Message dedupe survives a plugin reload (shared across admission instances)', async () => {
+  const { AdmissionController } = await import('../lib/host/admission.js');
+
+  const payload = (id) => ({
+    sender: { sender_id: { open_id: 'ou_owner' } },
+    message: {
+      message_id: id,
+      chat_type: 'p2p',
+      create_time: String(Date.now()),
+    },
+  });
+
+  const first = new AdmissionController({ ownerId: 'ou_owner', dmPolicy: 'owner' });
+  const r1 = first.check(payload('om_same_1'));
+  assert.equal(r1.allowed, true);
+
+  const second = new AdmissionController({ ownerId: 'ou_owner', dmPolicy: 'owner' });
+  const r2 = second.check(payload('om_same_1'));
+  assert.equal(r2.allowed, false);
+  assert.equal(r2.reason, 'duplicate_message');
+
+  delete globalThis.__DSH_FEISHU_SEEN_MESSAGES__;
+});

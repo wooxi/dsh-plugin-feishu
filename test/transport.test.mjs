@@ -101,3 +101,32 @@ test('Task 2: WS Gateway handles event dispatching and deduplication', async () 
   });
   assert.equal(dispatched, null, 'Duplicate event_id must be deduplicated');
 });
+
+test('Dedupe survives a plugin reload (shared across gateway instances)', async () => {
+  const { WsGateway } = await import('../lib/transport/ws-gateway.js');
+
+  let handled = 0;
+  const makeGateway = () =>
+    new WsGateway({
+      client: {},
+      onEvent: async () => {
+        handled += 1;
+      },
+      logger: { info() {}, warn() {}, debug() {}, error() {} },
+    });
+
+  const event = {
+    header: { event_id: 'evt_repeat_1', event_type: 'im.message.receive_v1' },
+    event: { message: { message_id: 'om_1' } },
+  };
+
+  const first = makeGateway();
+  await first.handleRawEvent(event);
+
+  const second = makeGateway();
+  await second.handleRawEvent(event);
+
+  assert.equal(handled, 1, 'second gateway must drop the already-handled event');
+
+  delete globalThis.__DSH_FEISHU_SEEN_EVENTS__;
+});
