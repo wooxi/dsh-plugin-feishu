@@ -137,3 +137,38 @@ test('Task 8 (Settings): QR Pairing lifecycle - generate, poll, and confirm', as
   assert.equal(pollResult2.status, 'scanned');
   assert.equal(pollResult2.openId, 'ou_scanned_user_888');
 });
+
+test('Saving config appends a feishu-channel block when the patch has none', async () => {
+  const { FeishuConfigRouter } = await import('../lib/host/config-router.js');
+  const router = new FeishuConfigRouter({ config: {}, logger: { warn() {}, info() {} } });
+
+  const before = '- id: other\n  config:\n    x: 1\n';
+  const once = router.mergePatch(before, {
+    appId: 'cli_abc',
+    appSecret: 'sec1',
+    ownerId: 'ou_1',
+    dmPolicy: 'owner',
+  });
+
+  assert.match(once, /^- id: feishu-channel$/m, 'must create the block');
+  assert.match(once, /appId: cli_abc/);
+  assert.match(once, /ownerId: ou_1/);
+
+  const twice = router.mergePatch(once, { appId: 'cli_NEW', appSecret: 'sec2', ownerId: 'ou_2' });
+  assert.equal((twice.match(/id: feishu-channel/g) || []).length, 1, 'must stay a single block');
+  assert.equal((twice.match(/appId:/g) || []).length, 1, 'must not duplicate keys');
+  assert.match(twice, /appId: cli_NEW/);
+  assert.doesNotMatch(twice, /cli_abc/);
+});
+
+test('Merging keeps neighbouring plugin blocks intact', async () => {
+  const { FeishuConfigRouter } = await import('../lib/host/config-router.js');
+  const router = new FeishuConfigRouter({ config: {}, logger: { warn() {}, info() {} } });
+
+  const before = '- id: a\n  config:\n    keep: 1\n- id: b\n  config:\n    keep: 2\n';
+  const out = router.mergePatch(before, { appId: 'cli_x' });
+
+  assert.match(out, /- id: a\n  config:\n    keep: 1/);
+  assert.match(out, /- id: b\n  config:\n    keep: 2/);
+  assert.equal((out.match(/id: feishu-channel/g) || []).length, 1);
+});
