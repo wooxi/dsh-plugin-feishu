@@ -2,6 +2,8 @@
 
 **Chat with your DeepSeek Harness agent from Feishu / Lark.**
 
+**English** · [中文](README.zh.md)
+
 Streaming cards, thinking folds, tool-call progress, approvals and images — right inside the chat app your team already uses. No public IP, no webhook endpoint, no port forwarding.
 
 <p align="center">

@@ -2,6 +2,8 @@
 
 **在飞书里直接和你的 DeepSeek Harness Agent 对话。**
 
+[English](README.md) · **中文**
+
 流式卡片、思考折叠、工具调用进度、审批、图片收发 —— 全部在你团队已经在用的飞书里。不需要公网 IP，不需要 Webhook 地址，不需要端口映射。
 
 <p align="center">
