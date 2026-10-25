@@ -1,167 +1,100 @@
 # dsh-plugin-feishu
 
-A **Feishu / Lark channel** for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Chat with your agent from Feishu — streaming cards, thinking folds, tool-call progress, approvals, images.
+**Chat with your DeepSeek Harness agent from Feishu / Lark.**
 
-Everything runs over an **outbound WebSocket long connection**: no public IP, no port forwarding, no webhook endpoint to expose.
+Streaming cards, thinking folds, tool-call progress, approvals and images — right inside the chat app your team already uses. No public IP, no webhook endpoint, no port forwarding.
 
-```
-Feishu client  ⇄  WebSocket long connection  ⇄  dsh-plugin-feishu  ⇄  DSH host
-```
+<p align="center">
+  <img src="docs/images/card-streaming.png" alt="Feishu streaming card" width="620">
+</p>
 
 ---
 
-## Features
+## What you get
 
-- **CardKit 2.0 streaming cards** — the reply is one live card updated with a debounced `sequence` cursor, so long answers never hit the single-card size limit.
-- **Thinking folds** — reasoning streams into a collapsible panel that collapses itself when the answer starts.
-- **Tool-call tracking** — every shell/grep/read step shows up as a status line with elapsed time.
-- **Waterfall approvals** — DSH approval requests arrive as card buttons; approve or reject without leaving Feishu. Free-form questions accept a plain text reply.
-- **Multimodal I/O** — send a screenshot into the chat; local images the agent produces are uploaded and rendered inline.
-- **Reply threading** — each answer is a reply to the user's message, not a loose new message.
-- **Settings page** — configure App ID / Secret / owner and storage directory from **DSH Settings → Feishu Channel**, including a QR-code pairing flow that fills in the owner Open ID for you.
-- **Per-chat sessions** — one Feishu chat maps to one DSH session that survives restarts; a dedicated workspace keeps its files away from your main one.
+### One card that builds itself as the agent thinks
 
-## Requirements
+The answer isn't a wall of text dropped at the end. A single Feishu card opens the moment you send a message and fills in live: tool calls appear as they run, reasoning streams into a fold, and the final answer types itself out.
 
-| | |
+- **Tool-call tracking** — every search, shell command or file read shows up with its arguments and elapsed time
+- **Thinking folds** — reasoning stays visible but collapses itself once the answer starts, so the card stays short
+- **Footer stats** — status, wall time, model name, token count and cache hit rate on one line:
+  `✅ 已完成 · 24s · gemini-3.8-flash · 33.0k tokens · 缓存 90%`
+- **Markdown that renders** — headings, lists, links, code fences and tables come out looking like they should
+
+### A settings page, not a config file
+
+Everything is configured from **DSH Settings → Feishu Channel**. Credentials, owner, directories and feature switches all live in the GUI.
+
+<p align="center">
+  <img src="docs/images/settings-credentials.png" alt="Feishu channel settings: credentials, owner, directories" width="520">
+</p>
+
+- **Save & verify** — one click saves, authenticates against Feishu, sends you a real test message and provisions the workspace
+- **QR pairing** — scan a code with the Feishu app and your Open ID fills itself in
+- **Secrets stay server-side** — the App Secret is never sent back to the browser; the UI only ever shows a mask
+
+### Feature switches
+
+<p align="center">
+  <img src="docs/images/settings-features.png" alt="Feature switches and QR pairing" width="500">
+</p>
+
+| Switch | What it changes |
 |---|---|
-| DSH | `>=0.2.0 <0.3.0`, **Web** surface (`webServer` service) |
-| Node | `>=20` |
-| Feishu | A self-built app in [Feishu Open Platform](https://open.feishu.cn) with long-connection event subscription |
+| CardKit 2.0 streaming | Live-updating cards instead of a plain text reply |
+| Thinking folds | Show reasoning in a collapsible panel |
+| Tool tracker | Show tool calls as status lines |
+| Multimodal I/O | Receive images and send local images back |
+| Group chat | Allow @-mentioning the bot in groups |
 
-This is a **GUI plugin**. It needs the Web profile's `webServer` service for its settings page; under a headless-only profile it will sit at `waiting for service: webServer`.
+### Built for a shared machine
+
+- **One owner only** — the bot can touch files and run commands, so it answers exactly one Feishu account. Leave the owner empty and the first person to message it is bound and told so; everyone else is rejected from then on.
+- **Its own workspace** — Feishu sessions are grouped under a dedicated workspace, so they never mix with your browser sessions. They persist across restarts.
+- **Its own directory** — attachments, agent artifacts and a message audit log live in one folder you choose.
+- **Replies in thread** — every answer is a reply to your message, not a loose new one.
+- **No inbound port** — the connection is outbound only.
 
 ## Install
 
 ```sh
 dsh plugin --profile web add dsh-plugin-feishu
-dsh --profile web --dump-config    # the "feishu-channel" row should now appear
 dsh --profile web
 ```
 
-From a local checkout instead:
-
-```sh
-dsh plugin --profile web add /path/to/dsh-plugin-feishu
-```
-
-Both forms install prebuilt JavaScript — there is no `prepare` build step, so no `allowBuilds` permission is needed.
+Then open **DSH Settings → Feishu Channel**, paste your App ID and App Secret, and press **Save & verify**.
 
 ## Feishu app setup
 
-1. Create a **self-built application** at [open.feishu.cn](https://open.feishu.cn).
-2. **Permissions** — add these scopes:
-   - `im:message` — send and receive messages
-   - `im:message.p2p_msg:readonly` — read direct messages sent to the bot
-   - `im:message.group_at_msg:readonly` — read group messages that @-mention the bot (only if you enable group chat)
-   - `im:resource` — upload and download images and files
-3. **Events** — choose **"Receive events through long connection"** (长连接), *not* a webhook URL. Add:
-   - `im.message.receive_v1`
-   - `card.action.trigger`
-4. **Publish** — create and release a version after changing scopes or events, otherwise the app keeps the old grant.
+In the [Feishu Open Platform](https://open.feishu.cn), on your self-built app:
 
-> The event subscription mode is the most common setup mistake. If replies never arrive but outbound messages work, check that step first.
+1. **Permissions** — `im:message`, `im:message.p2p_msg:readonly`, `im:resource` (plus `im:message.group_at_msg:readonly` for group chat).
+2. **Events** — subscription mode **"Receive events through long connection"**, then add `im.message.receive_v1` and `card.action.trigger`.
+3. **Publish** — release a version after changing scopes or events.
 
-## Configure
+> Step 2 is the one people miss. If replies never arrive but sending works, check it first.
 
-Open **DSH Settings → Feishu Channel** and fill in:
+## Requirements
 
-| Field | Meaning |
-|---|---|
-| App ID / App Secret | from the Feishu app's credentials page |
-| Owner Open ID | the only Feishu account allowed to talk to this instance |
-| Storage directory | where attachments and the message audit log go (default `/dsh-workspace/feishu`) |
-| Workspace directory | the DSH workspace the Feishu sessions are grouped under |
-| DM policy | `owner` (only the owner) or `open` |
-| Group chat | allow @-mentions in groups |
-
-Press **保存并验证** (Save & verify). One click saves the settings, authenticates
-against Feishu, sends a test message to the owner, and creates the Feishu
-workspace so every later session is grouped under it — no restart-and-pray.
-
-The same values can be set in the profile's `cordis.patch.yml`:
-
-```yaml
-- id: feishu-channel
-  config:
-    appId: cli_xxxxxxxxxxxx
-    appSecret: your_app_secret
-    ownerId: ou_xxxxxxxxxxxx
-    workspaceDir: /dsh-workspace/feishu
-    dmPolicy: owner
-```
-
-Files land in the storage directory:
-
-```
-<workspaceDir>/
-├── attachments/                 # images and files received from Feishu
-├── artifacts/                   # files the agent produced for Feishu sessions
-├── logs/feishu-messages.jsonl   # inbound/outbound audit trail
-└── session-bindings.json        # Feishu chat → DSH session map
-```
-
-### Owner binding
-
-`ownerId` is the security boundary: the bot can run commands and touch files,
-so only one Feishu account should reach it. Leave it empty and the **first**
-person to message the bot is bound as owner and told so; every other account is
-rejected from then on. Fill it in (or scan the pairing QR) to skip that
-first-come step.
-
-## How it works
-
-```
-lib/
-├── index.js                     # plugin entry: apply(), inject, event wiring
-├── config.js                    # Schemastery config schema
-├── client.js                    # settings-page UI (DSH client slot)
-├── transport/
-│   ├── ws-gateway.js            # Feishu long-connection event loop
-│   └── lark-client.js           # REST: messages, CardKit, resources
-├── streaming/
-│   ├── card-builder.js          # CardKit 2.0 card JSON (streaming + complete)
-│   ├── cardkit-controller.js    # card lifecycle: start → stream → finalize
-│   ├── markdown-style.js        # Feishu markdown quirks (headings, tables, img keys)
-│   ├── flush-controller.js      # debounce & coalesce chunk updates
-│   └── tool-use-tracker.js      # tool-call state → card elements
-├── host/
-│   ├── session-bridge.js        # chat → DSH session resolution and prompting
-│   ├── admission.js             # dedup, replay window, owner gate
-│   ├── storage-manager.js       # dedicated directory layout + audit log
-│   └── config-router.js         # settings-page HTTP API
-├── interaction/
-│   ├── approval-handler.js      # waterfall approval → card buttons
-│   ├── question-handler.js      # waterfall questions → card / text reply
-│   └── menu-handler.js          # /new, /model, /help commands
-└── media/                       # image download and upload
-```
-
-## Tests
-
-```sh
-npm test
-```
-
-31 tests cover the config schema, card JSON shape, streaming lifecycle, admission rules, session binding, transport retries and the waterfall interaction handlers. None of them need a live Feishu tenant — the transport is mocked at the `fetch` boundary.
-
-The one thing tests cannot prove is the Feishu side: event subscription mode, scopes and app release. If the plugin logs `飞书长连接已建立` and inbound messages still never appear, that is a Feishu console problem, not a plugin problem.
-
-## License
-
-MIT © wooxi
+- DSH `0.2.x`, Web profile
+- Node `>=20`
+- A self-built Feishu app with long-connection event subscription
 
 ## Troubleshooting
 
-**`ERR_PNPM_IGNORED_BUILDS` on install.** `@larksuiteoapi/node-sdk` pulls in `protobufjs`, whose postinstall script pnpm blocks by default. The profile's `pnpm-workspace.yaml` gets a placeholder like:
+**`ERR_PNPM_IGNORED_BUILDS: protobufjs`** — pnpm blocks the postinstall of a transitive dependency of the Feishu SDK. Allow it once and reinstall:
 
 ```yaml
+# ~/.dsh/profiles/<profile>/pnpm-workspace.yaml
 allowBuilds:
-  protobufjs: set this to true or false
+  protobufjs: true
 ```
 
-Set it to `true` and re-run the install.
+**Messages arrive but replies don't** — the event subscription mode is still webhook. Switch it to long connection and publish a version.
 
-**Settings page does not appear.** The bundle has to be listed in the profile's `dsh.profile.bundles` as well as in `dependencies`. `dsh plugin add` normally does both; if you edited the profile by hand, check that `dsh-plugin-feishu` is in the array.
+**Sessions land under "Ungrouped"** — press **Save & verify** once; it provisions the workspace. Sessions created before that stay where they are.
 
-**`session "…" belongs to "…", not "…"`.** The storage directory was changed while a session ID was still bound to the old one. The plugin now derives session IDs with a workspace fingerprint and retries on conflict, but if you hit it on an old install, clear `session-bindings.json` in the storage directory.
+## License
+
+MIT
