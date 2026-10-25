@@ -84,60 +84,59 @@ test('Task 5: MenuHandler routes custom menu actions to DSH commands', async () 
   assert.match(resHelp, /DSH/);
 });
 
-test('Task 5: 会话 ID 携带工作区指纹，换工作区不会撞 ApiSessionCwdConflict', async () => {
+test('Task 5: 新建会话交给宿主生成 ID，并带上 workspaceId 以便归组', async () => {
   const { SessionBridge } = await import('../lib/host/session-bridge.js');
 
   const created = [];
   const mockSessionController = {
     create: async (request) => {
       created.push(request);
-      return { sessionId: request.sessionId };
+      return { sessionId: 'sess_generated_1' };
     },
   };
-  const mockCtx = {
-    get: (name) => (name === 'sessionController' ? mockSessionController : undefined),
+  const mockWorkspaceController = {
+    create: async ({ path }) => ({ workspace: { workspaceId: 'ws-1' }, path, created: false }),
   };
-
-  const a = new SessionBridge({ ctx: mockCtx, workspacePath: '/dsh-workspace/feishu' });
-  const b = new SessionBridge({ ctx: mockCtx, workspacePath: '/dsh-workspace/feishu-storage' });
-
-  const idA = await a.resolveSessionId('oc_abc123');
-  const idB = await b.resolveSessionId('oc_abc123');
-
-  assert.notEqual(idA, idB, '不同工作区必须派生出不同会话 ID');
-  assert.match(idA, /^feishu-[a-z0-9]+-oc_abc123$/, `意外格式: ${idA}`);
-
-  // 同一实例重复解析必须命中绑定，不再 create。
-  const again = await a.resolveSessionId('oc_abc123');
-  assert.equal(again, idA);
-  assert.equal(created.filter((r) => r.sessionId === idA).length, 1, '绑定后不应重复 create');
-});
-
-test('Task 5: 遇到 "belongs to" 冲突时换带指纹的 ID 重试，而不是直接失败', async () => {
-  const { SessionBridge } = await import('../lib/host/session-bridge.js');
-
-  const attempts = [];
-  const mockSessionController = {
-    create: async (request) => {
-      attempts.push(request.sessionId);
-      if (attempts.length === 1) {
-        throw new Error(
-          `session "${request.sessionId}" belongs to "/dsh-workspace/feishu-storage", not "/dsh-workspace/feishu"`,
-        );
-      }
-      return { sessionId: request.sessionId };
+  const mockCtx = {
+    get: (name) => {
+      if (name === 'sessionController') return mockSessionController;
+      if (name === 'workspaceController') return mockWorkspaceController;
+      return undefined;
     },
-  };
-  const mockCtx = {
-    get: (name) => (name === 'sessionController' ? mockSessionController : undefined),
   };
 
   const bridge = new SessionBridge({ ctx: mockCtx, workspacePath: '/dsh-workspace/feishu' });
-  const id = await bridge.resolveSessionId('oc_xyz');
+  const id = await bridge.resolveSessionId('oc_abc123');
 
-  assert.equal(attempts.length, 2, '应当重试一次');
-  assert.notEqual(attempts[0], attempts[1], '重试必须换 ID');
-  assert.equal(id, attempts[1]);
+  assert.equal(id, 'sess_generated_1', '必须采用宿主返回的会话 ID');
+  assert.equal(created.length, 1);
+  assert.deepEqual(created[0], { workspaceId: 'ws-1' }, 'create 只传 workspaceId，不传 sessionId');
+
+  const again = await bridge.resolveSessionId('oc_abc123');
+  assert.equal(again, 'sess_generated_1', '同一 chat 重复解析必须命中绑定');
+  assert.equal(created.length, 1, '绑定后不应重复 create');
+});
+
+test('Task 5: 没有 workspaceController 时退化为 cwd 创建，不丢消息', async () => {
+  const { SessionBridge } = await import('../lib/host/session-bridge.js');
+
+  const created = [];
+  const mockSessionController = {
+    create: async (request) => {
+      created.push(request);
+      return { sessionId: 'sess_fallback' };
+    },
+  };
+  const mockCtx = {
+    get: (name) => (name === 'sessionController' ? mockSessionController : undefined),
+  };
+
+  const bridge = new SessionBridge({ ctx: mockCtx, workspacePath: "/dsh-workspace/feishu" });
+  const id = await bridge.resolveSessionId('oc_no_ws');
+
+  assert.equal(id, 'sess_fallback');
+  assert.equal(created[0].cwd, '/dsh-workspace/feishu');
+  assert.equal(created[0].workspaceId, undefined);
 });
 
 test('Task 5: create 彻底失败时复用同工作区已有会话兜底', async () => {

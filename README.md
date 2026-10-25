@@ -69,11 +69,15 @@ Open **DSH Settings → Feishu Channel** and fill in:
 | Field | Meaning |
 |---|---|
 | App ID / App Secret | from the Feishu app's credentials page |
-| Owner Open ID | who may talk to this instance; also settable by scanning the QR code |
+| Owner Open ID | the only Feishu account allowed to talk to this instance |
 | Storage directory | where attachments and the message audit log go (default `/dsh-workspace/feishu`) |
 | Workspace directory | the DSH workspace the Feishu sessions are grouped under |
 | DM policy | `owner` (only the owner) or `open` |
 | Group chat | allow @-mentions in groups |
+
+Press **保存并验证** (Save & verify). One click saves the settings, authenticates
+against Feishu, sends a test message to the owner, and creates the Feishu
+workspace so every later session is grouped under it — no restart-and-pray.
 
 The same values can be set in the profile's `cordis.patch.yml`:
 
@@ -96,6 +100,14 @@ Files land in the storage directory:
 ├── logs/feishu-messages.jsonl   # inbound/outbound audit trail
 └── session-bindings.json        # Feishu chat → DSH session map
 ```
+
+### Owner binding
+
+`ownerId` is the security boundary: the bot can run commands and touch files,
+so only one Feishu account should reach it. Leave it empty and the **first**
+person to message the bot is bound as owner and told so; every other account is
+rejected from then on. Fill it in (or scan the pairing QR) to skip that
+first-come step.
 
 ## How it works
 
