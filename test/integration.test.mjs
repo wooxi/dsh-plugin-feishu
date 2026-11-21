@@ -148,4 +148,31 @@ test('Integration: 插件全链路（入站消息 → sessionController 投递 �
   });
 
   assert.equal(cancelRequests.length, 1, '应通过 sessionController.cancel 中止一轮');
+
+  // 6. 发送斜杠命令 /help：直接由宿主执行，绝不向模型投递 prompt
+  const initialPromptCount = promptRequests.length;
+  let commandReplyText = '';
+  const originalSendMessage = instance.transport.sendMessage;
+  instance.transport.sendMessage = async (msg) => {
+    commandReplyText = msg.content;
+    return { message_id: 'cmd_reply_1' };
+  };
+
+  await instance.wsGateway.handleRawEvent({
+    header: { event_id: 'evt_cmd_help_4', event_type: 'im.message.receive_v1' },
+    event: {
+      sender: { sender_id: { open_id: 'ou_tester_001' } },
+      message: {
+        message_id: 'om_cmd_help_4',
+        message_type: 'text',
+        content: JSON.stringify({ text: '/help' }),
+        create_time: `${Date.now()}`,
+      },
+    },
+  });
+
+  assert.equal(promptRequests.length, initialPromptCount, '斜杠命令不应向模型投递 prompt');
+  assert.match(commandReplyText, /\/new/);
+  assert.match(commandReplyText, /\/help/);
+  instance.transport.sendMessage = originalSendMessage;
 });

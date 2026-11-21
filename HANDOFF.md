@@ -4,8 +4,8 @@ DSH 飞书通道插件（`dsh-plugin-feishu`）的接手说明。面向下一个
 
 - 仓库：https://github.com/wooxi/dsh-plugin-feishu
 - 本地：`/dsh-workspace/dsh-plugin-feishu`
-- 版本：`1.1.0`（tag `v1.1.0`）
-- 规模：21 个源文件、约 3.9k 行、33 项测试（`npm test`）
+- 版本：`1.2.0`（tag `v1.2.0`）
+- 规模：22 个源文件、41 项测试（`npm test`）
 - 安装位置：`/root/.dsh/profiles/web/node_modules/dsh-plugin-feishu`（以 `github:wooxi/dsh-plugin-feishu` 形式安装，非 link）
 
 ---
@@ -39,6 +39,7 @@ DSH 飞书通道插件（`dsh-plugin-feishu`）的接手说明。面向下一个
 | `lib/host/admission.js` (92) | 去重、防重放、owner 鉴权、群聊 @ 判定 |
 | `lib/host/config-router.js` (473) | 设置页 HTTP API：读写配置、验证、QR 配对 |
 | `lib/host/storage-manager.js` (67) | 专用目录布局 + 消息审计日志 |
+| `lib/interaction/command-dispatcher.js` (172) | 斜杠命令拦截与分发（通道指令 + DSH commands 原生执行） |
 | `lib/interaction/*` (340) | waterfall 审批、提问、菜单命令 |
 
 ## 三、必须知道的六个坑
@@ -139,11 +140,12 @@ dsh plugin --profile web add github:wooxi/dsh-plugin-feishu
 
 ## 六、当前状态与待办
 
-**已验证可用**（2026-10-25，真实飞书租户）：
+**已验证可用**（真实飞书租户 / 单元与集成测试）：
 - 长连接收发、流式卡片、思考折叠、工具调用状态、footer 统计
 - 会话归组到 `/dsh-workspace/feishu` 工作区
 - 首次消息自动绑定 owner，之后拒绝其他人
 - 设置页保存并验证、QR 配对
+- 斜杠命令（`/new`, `/clear`, `/stop`, `/status`, `/help`, `/compact` 等）原地拦截直接执行，不经过大模型推理，零 Token 消耗，直接返回执行状态与文本回复
 
 **待办**：
 

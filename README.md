@@ -50,6 +50,16 @@ Everything is configured from **DSH Settings → Feishu Channel**. Credentials, 
 | Multimodal I/O | Receive images and send local images back |
 | Group chat | Allow @-mentioning the bot in groups |
 
+### Slash commands executed directly (no LLM involved)
+
+Any message starting with `/` is intercepted and executed locally by the DSH host — zero tokens spent, no model turn created, no hallucination:
+
+- `/new` or `/clear` — Reset the session and start a fresh context
+- `/stop` or `/abort` — Abort the currently running turn immediately
+- `/status` — View active session ID, workspace path, and default model
+- `/help` — List available channel and host commands
+- DSH host commands (e.g. `/compact`) — Dispatched straight to DSH's native command engine, results sent back directly
+
 ### Built for a shared machine
 
 - **One owner only** — the bot can touch files and run commands, so it answers exactly one Feishu account. Leave the owner empty and the first person to message it is bound and told so; everyone else is rejected from then on.
